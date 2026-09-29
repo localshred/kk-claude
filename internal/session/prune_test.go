@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -75,5 +76,25 @@ func TestPruneEmptyStore(t *testing.T) {
 		}}
 	if err := app.Prune(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestPruneNoDeadReportsClean(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	t.Setenv("HOME", t.TempDir())
+	a := liveSession(t, "alive1", "id-a1")
+	b := liveSession(t, "alive2", "id-a2")
+	store.Write([]store.Session{a, b})
+	var out bytes.Buffer
+	app := App{
+		Out: &out, Now: time.Now,
+		PickMany: func(_ []store.Session, _ func(store.Session) string) ([]store.Session, error) { return nil, nil },
+	}
+	if err := app.Prune(); err != nil {
+		t.Fatal(err)
+	}
+	output := out.String()
+	if !strings.Contains(output, "✅ No dead sessions to auto-prune.") {
+		t.Fatalf("expected no-dead message, got: %s", output)
 	}
 }

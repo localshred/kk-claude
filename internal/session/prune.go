@@ -32,6 +32,8 @@ func (a App) Prune() error {
 		for _, s := range dead {
 			fmt.Fprintf(a.Out, "   %s\n", ui.Dim(s.Name))
 		}
+	} else {
+		fmt.Fprintln(a.Out, "✅ No dead sessions to auto-prune.")
 	}
 	if err := store.Write(alive); err != nil {
 		return err
