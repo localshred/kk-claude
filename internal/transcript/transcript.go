@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -64,8 +65,10 @@ func CurrentSessionID(cwd string) string {
 	return trimJSONL(filepath.Base(newest))
 }
 
-// EncodeCwd maps a path to Claude Code's project-dir name (each run of
-// non-alphanumeric characters becomes a hyphen).
+// EncodeCwd maps a path to Claude Code's project-dir name. Each
+// non-alphanumeric character becomes a hyphen (runs are NOT collapsed),
+// matching Claude Code's project-dir encoding (e.g. /Users/bj/.claude →
+// -Users-bj--claude).
 func EncodeCwd(cwd string) string { return reNonAlnum.ReplaceAllString(cwd, "-") }
 
 // File returns the path to a session's `<id>.jsonl` under any project dir.
@@ -84,5 +87,5 @@ func ProjectsDir() string {
 }
 
 func trimJSONL(base string) string {
-	return base[:len(base)-len(".jsonl")]
+	return strings.TrimSuffix(base, ".jsonl")
 }

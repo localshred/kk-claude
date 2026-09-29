@@ -13,6 +13,12 @@ func TestEncodeCwd(t *testing.T) {
 	}
 }
 
+func TestEncodeCwdDoesNotCollapseRuns(t *testing.T) {
+	if got := EncodeCwd("/Users/bj/.claude"); got != "-Users-bj--claude" {
+		t.Fatalf("encode = %q, want -Users-bj--claude (runs must NOT collapse)", got)
+	}
+}
+
 func TestFileAndAliveFindTranscript(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
