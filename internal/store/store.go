@@ -16,14 +16,14 @@ type Session struct {
 	Cwd  string
 }
 
-// DataDir is koolkit's claude state dir, honoring XDG_DATA_HOME.
+// DataDir is koolkit's sessions state dir, honoring XDG_DATA_HOME.
 func DataDir() string {
 	data := os.Getenv("XDG_DATA_HOME")
 	if data == "" {
 		home, _ := os.UserHomeDir()
 		data = filepath.Join(home, ".local", "share")
 	}
-	return filepath.Join(data, "koolkit", "claude")
+	return filepath.Join(data, "koolkit", "sessions")
 }
 
 // LegacyPath is the pre-koolkit mx session file.
@@ -53,8 +53,8 @@ func Migrate() error {
 	return os.WriteFile(Path(), data, 0o644)
 }
 
-// Path is the session list file.
-func Path() string { return filepath.Join(DataDir(), "sessions.txt") }
+// Path is the claude session list file.
+func Path() string { return filepath.Join(DataDir(), "claude.txt") }
 
 // Read parses the session file, skipping blank and malformed lines. A
 // missing file yields an empty slice.

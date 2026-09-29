@@ -72,7 +72,7 @@ func TestSanitizeNameCollapsesWhitespace(t *testing.T) {
 func TestPathUnderKoolkitData(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_DATA_HOME", dir)
-	if want := filepath.Join(dir, "koolkit", "claude", "sessions.txt"); Path() != want {
+	if want := filepath.Join(dir, "koolkit", "sessions", "claude.txt"); Path() != want {
 		t.Fatalf("Path = %q, want %q", Path(), want)
 	}
 }
