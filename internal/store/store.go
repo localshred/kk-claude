@@ -113,5 +113,23 @@ func Write(sessions []Session) error {
 		b.WriteString(strings.Join(parts, " "))
 		b.WriteByte('\n')
 	}
-	return os.WriteFile(Path(), []byte(b.String()), 0o644)
+	tmp, err := os.CreateTemp(DataDir(), "sessions-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	if _, err := tmp.WriteString(b.String()); err != nil {
+		tmp.Close()
+		os.Remove(tmpName)
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpName)
+		return err
+	}
+	if err := os.Chmod(tmpName, 0o644); err != nil {
+		os.Remove(tmpName)
+		return err
+	}
+	return os.Rename(tmpName, Path())
 }
