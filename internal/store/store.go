@@ -26,6 +26,33 @@ func DataDir() string {
 	return filepath.Join(data, "koolkit", "claude")
 }
 
+// LegacyPath is the pre-koolkit mx session file.
+func LegacyPath() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".claude-sessions.txt")
+}
+
+// Migrate seeds the koolkit store from the legacy mx file exactly once: it
+// copies LegacyPath() to Path() only when Path() does not yet exist and the
+// legacy file does. It never overwrites an existing store and leaves the
+// legacy file untouched.
+func Migrate() error {
+	if _, err := os.Stat(Path()); err == nil {
+		return nil
+	}
+	data, err := os.ReadFile(LegacyPath())
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(DataDir(), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(Path(), data, 0o644)
+}
+
 // Path is the session list file.
 func Path() string { return filepath.Join(DataDir(), "sessions.txt") }
 
