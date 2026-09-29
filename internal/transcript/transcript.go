@@ -80,6 +80,14 @@ func File(id string) (string, bool) {
 	return matches[0], true
 }
 
+// ProjectsAvailable reports whether Claude Code's projects dir exists.
+// When it does not, transcript liveness cannot be judged and callers must
+// not treat every session as dead.
+func ProjectsAvailable() bool {
+	fi, err := os.Stat(ProjectsDir())
+	return err == nil && fi.IsDir()
+}
+
 // ProjectsDir is where Claude Code stores per-project transcripts.
 func ProjectsDir() string {
 	home, _ := os.UserHomeDir()

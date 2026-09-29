@@ -19,6 +19,10 @@ func (a App) Prune() error {
 		fmt.Fprintln(a.Out, "📭 No sessions to prune.")
 		return nil
 	}
+	if !transcript.ProjectsAvailable() {
+		fmt.Fprintln(a.Out, "⚠️  Claude projects dir not found; skipping prune to avoid data loss.")
+		return nil
+	}
 	var alive, dead []store.Session
 	for _, s := range sessions {
 		if transcript.Alive(s.ID) {

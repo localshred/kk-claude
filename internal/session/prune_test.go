@@ -98,3 +98,29 @@ func TestPruneNoDeadReportsClean(t *testing.T) {
 		t.Fatalf("expected no-dead message, got: %s", output)
 	}
 }
+
+func TestPruneSkipsWhenNoProjectsDir(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	t.Setenv("HOME", t.TempDir())
+	a := store.Session{Name: "keepme", ID: "id-1"}
+	b := store.Session{Name: "keepme2", ID: "id-2"}
+	store.Write([]store.Session{a, b})
+	var out bytes.Buffer
+	app := App{
+		Out: &out, Now: time.Now,
+		PickMany: func([]store.Session, func(store.Session) string) ([]store.Session, error) {
+			t.Fatal("must not pick when projects dir is absent")
+			return nil, nil
+		},
+	}
+	if err := app.Prune(); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := store.Read()
+	if len(got) != 2 {
+		t.Fatalf("no projects dir must leave store untouched, got %+v", got)
+	}
+	if !strings.Contains(out.String(), "skipping prune") {
+		t.Fatalf("expected skip warning, got: %s", out.String())
+	}
+}
