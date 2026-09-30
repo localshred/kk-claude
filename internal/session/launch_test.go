@@ -50,15 +50,70 @@ func TestLaunchResumeBuildsArgv(t *testing.T) {
 	}
 }
 
-func TestScratchLaunchesBareClaude(t *testing.T) {
+func TestScratchDefaultsLowSonnet(t *testing.T) {
 	var c capture
 	var out bytes.Buffer
 	app := appWithCapture(&c, &out)
 	if err := app.Scratch(); err != nil {
 		t.Fatal(err)
 	}
-	if len(c.args) != 0 {
-		t.Fatalf("scratch should pass no args, got %v", c.args)
+	want := []string{"--model", modelSonnet, "--effort", "low"}
+	if c.dir != "" || !equal(c.args, want) {
+		t.Fatalf("scratch dir=%q args=%v, want %v", c.dir, c.args, want)
+	}
+}
+
+func TestScratchExplicitFlagsOverrideDefault(t *testing.T) {
+	var c capture
+	var out bytes.Buffer
+	app := appWithCapture(&c, &out)
+	app.Model, app.Effort = modelOpus, "high"
+	if err := app.Scratch(); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"--model", modelOpus, "--effort", "high"}
+	if !equal(c.args, want) {
+		t.Fatalf("scratch override args=%v, want %v", c.args, want)
+	}
+}
+
+func TestReviewDefaultsHighOpusWithPrompt(t *testing.T) {
+	var c capture
+	var out bytes.Buffer
+	app := appWithCapture(&c, &out)
+	if err := app.Review("https://x/pull/1"); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"--model", modelOpus, "--effort", "high", "/spiff-review https://x/pull/1"}
+	if c.dir != "" || !equal(c.args, want) {
+		t.Fatalf("review dir=%q args=%v, want %v", c.dir, c.args, want)
+	}
+}
+
+func TestLaunchNewThreadsExplicitFlags(t *testing.T) {
+	var c capture
+	var out bytes.Buffer
+	app := appWithCapture(&c, &out)
+	app.Model, app.Effort = modelSonnet, "medium"
+	if err := app.launchNew(store.Session{Name: "p", ID: "id", Cwd: "/tmp/p"}); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"--session-id", "id", "--name", "p", "--model", modelSonnet, "--effort", "medium"}
+	if !equal(c.args, want) {
+		t.Fatalf("launchNew args=%v, want %v", c.args, want)
+	}
+}
+
+func TestModelFor(t *testing.T) {
+	cases := map[string]string{"": "", "s": modelSonnet, "o": modelOpus}
+	for in, want := range cases {
+		got, err := ModelFor(in)
+		if err != nil || got != want {
+			t.Errorf("ModelFor(%q) = (%q, %v), want %q", in, got, err, want)
+		}
+	}
+	if _, err := ModelFor("x"); err == nil {
+		t.Error("ModelFor(\"x\") should error")
 	}
 }
 

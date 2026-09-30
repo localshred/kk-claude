@@ -8,18 +8,24 @@ import (
 	"github.com/localshred/kk-claude/internal/store"
 )
 
-const newMarker = "__NEW__"
+const (
+	newMarker     = "__NEW__"
+	scratchMarker = "__SCRATCH__"
+)
 
-// Pick fuzzy-selects a saved session to resume, or the leading New-session
-// entry to start a named new session.
+// Pick fuzzy-selects a saved session to resume, or one of the leading entries
+// to start a named new session or a throwaway scratch session.
 func (a App) Pick(cwd string) error {
 	sessions, err := store.Read()
 	if err != nil {
 		return err
 	}
-	entries := append([]store.Session{{Name: "✨ New session", ID: newMarker}}, sessions...)
+	entries := append([]store.Session{
+		{Name: "✨ New session", ID: newMarker},
+		{Name: "🧪 Scratch session", ID: scratchMarker},
+	}, sessions...)
 	sel, ok, err := a.PickOne(entries, func(s store.Session) string {
-		if s.ID == newMarker {
+		if s.ID == newMarker || s.ID == scratchMarker {
 			return s.Name
 		}
 		return fmt.Sprintf("%s  %s", s.Name, s.Cwd)
@@ -31,10 +37,14 @@ func (a App) Pick(cwd string) error {
 		fmt.Fprintln(a.Out, "❌ Nothing picked.")
 		return nil
 	}
-	if sel.ID == newMarker {
+	switch sel.ID {
+	case newMarker:
 		return a.newSession(cwd)
+	case scratchMarker:
+		return a.Scratch()
+	default:
+		return a.launchResume(sel)
 	}
-	return a.launchResume(sel)
 }
 
 func (a App) newSession(cwd string) error {

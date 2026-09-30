@@ -38,6 +38,40 @@ func newApp(out *cobra.Command) session.App {
 	}
 }
 
+var (
+	flagHigh  bool
+	flagLow   bool
+	flagMid   bool
+	flagModel string
+)
+
+// appFrom builds an App with the resolved --model/--effort flags applied.
+func appFrom(cmd *cobra.Command) (session.App, error) {
+	model, err := session.ModelFor(flagModel)
+	if err != nil {
+		return session.App{}, err
+	}
+	app := newApp(cmd)
+	app.Model = model
+	app.Effort = effortFrom()
+	return app, nil
+}
+
+// effortFrom resolves the --low/--mid/--high flags to a claude effort level,
+// highest wins; empty when none set.
+func effortFrom() string {
+	switch {
+	case flagHigh:
+		return "high"
+	case flagMid:
+		return "medium"
+	case flagLow:
+		return "low"
+	default:
+		return ""
+	}
+}
+
 func newRoot() *cobra.Command {
 	_ = store.Migrate()
 	root := &cobra.Command{
@@ -46,30 +80,71 @@ func newRoot() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			app, err := appFrom(cmd)
+			if err != nil {
+				return err
+			}
 			cwd, _ := os.Getwd()
-			return newApp(cmd).Pick(cwd)
+			return app.Pick(cwd)
 		},
 	}
+	root.PersistentFlags().StringVarP(&flagModel, "model", "m", "", "Model: s (sonnet 5.5) or o (opus 5.5 1m)")
+	root.PersistentFlags().BoolVar(&flagLow, "low", false, "Low effort for the session")
+	root.PersistentFlags().BoolVar(&flagMid, "mid", false, "Medium effort for the session")
+	root.PersistentFlags().BoolVar(&flagHigh, "high", false, "High effort for the session")
 	root.AddCommand(
 		&cobra.Command{
 			Use: "list", Short: "Print saved sessions in alphabetical order",
-			RunE: func(cmd *cobra.Command, _ []string) error { return newApp(cmd).List() },
+			RunE: func(cmd *cobra.Command, _ []string) error {
+				app, err := appFrom(cmd)
+				if err != nil {
+					return err
+				}
+				return app.List()
+			},
 		},
 		&cobra.Command{
-			Use: "scratch", Short: "Launch a throwaway session, unsaved",
-			RunE: func(cmd *cobra.Command, _ []string) error { return newApp(cmd).Scratch() },
+			Use: "scratch", Short: "Launch a throwaway session, unsaved (low effort sonnet by default)",
+			RunE: func(cmd *cobra.Command, _ []string) error {
+				app, err := appFrom(cmd)
+				if err != nil {
+					return err
+				}
+				return app.Scratch()
+			},
+		},
+		&cobra.Command{
+			Use: "review <url>", Short: "Scratch session seeded with /spiff-review <url> (high effort opus by default)",
+			Args: cobra.ExactArgs(1),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				app, err := appFrom(cmd)
+				if err != nil {
+					return err
+				}
+				return app.Review(args[0])
+			},
 		},
 		&cobra.Command{
 			Use: "keep <name> [session-id]", Short: "Save the current session under <name>",
 			Args: cobra.RangeArgs(1, 2),
 			RunE: func(cmd *cobra.Command, args []string) error {
+				app, err := appFrom(cmd)
+				if err != nil {
+					return err
+				}
 				cwd, _ := os.Getwd()
-				return newApp(cmd).Keep(args, cwd)
+				return app.Keep(args, cwd)
 			},
 		},
 		&cobra.Command{
 			Use: "prune", Short: "Auto-remove dead sessions, then multi-select to prune more",
-			RunE: func(cmd *cobra.Command, _ []string) error { return newApp(cmd).Prune() },
+			RunE: func(cmd *cobra.Command, _ []string) error {
+				app, err := appFrom(cmd)
+				if err != nil {
+					return err
+				}
+				return app.Prune()
+			},
 		},
 	)
 	return root

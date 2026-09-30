@@ -34,6 +34,33 @@ func TestPickResumesSelected(t *testing.T) {
 	}
 }
 
+func TestPickScratchEntryLaunchesScratch(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	t.Setenv("HOME", t.TempDir())
+	store.Write([]store.Session{{Name: "proj", ID: "id-1", Cwd: "/tmp/proj"}})
+	var c capture
+	var out bytes.Buffer
+	app := App{
+		Out: &out, Now: time.Now,
+		Launch: func(dir string, args ...string) error { c.dir, c.args = dir, args; return nil },
+		PickOne: func(items []store.Session, _ func(store.Session) string) (store.Session, bool, error) {
+			for _, s := range items {
+				if s.ID == scratchMarker {
+					return s, true, nil
+				}
+			}
+			return store.Session{}, false, nil
+		},
+	}
+	if err := app.Pick("/tmp/cwd"); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"--model", modelSonnet, "--effort", "low"}
+	if c.dir != "" || !equal(c.args, want) {
+		t.Fatalf("scratch entry should launch scratch, got dir=%q args=%v", c.dir, c.args)
+	}
+}
+
 func TestPickCancelIsClean(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", t.TempDir())
 	t.Setenv("HOME", t.TempDir())

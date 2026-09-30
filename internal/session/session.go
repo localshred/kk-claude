@@ -18,7 +18,9 @@ import (
 // Launcher runs the claude binary in dir with inherited stdio.
 type Launcher func(dir string, args ...string) error
 
-// App holds the injectable seams the command handlers depend on.
+// App holds the injectable seams the command handlers depend on. Model and
+// Effort are the resolved --model/--effort values (empty when unset), applied
+// to launched sessions.
 type App struct {
 	Out      io.Writer
 	Launch   Launcher
@@ -26,6 +28,8 @@ type App struct {
 	PickMany func([]store.Session, func(store.Session) string) ([]store.Session, error)
 	Prompt   func(string) string
 	Now      func() time.Time
+	Model    string
+	Effort   string
 }
 
 // List prints saved sessions alphabetically with live start/update ages.
